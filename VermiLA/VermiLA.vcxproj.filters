@@ -24,12 +24,18 @@
     <ClInclude Include="header\vector.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="header\spawnMatrix.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\test.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="source\matrix.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\spawnMatrix.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

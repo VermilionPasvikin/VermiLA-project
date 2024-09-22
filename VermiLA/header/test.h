@@ -1,42 +1,27 @@
 #pragma once
 #include <iostream>
-#include <ctime>
-#include <cstdlib>
+#include <chrono>
 
 namespace VermiLA
 {
 	void printHello();
 
-	template<typename TYPE>
-	TYPE** generate2DArray_randomly(size_t RowCount, size_t ColumnCount)
+	class Timer
 	{
-		srand(time(0));
-		int max = 1000;
-		int min = -1000;
-		TYPE** array = new TYPE * [RowCount];
-		for (size_t i = 0; i < RowCount; i++)
-		{
-			array[i] = new TYPE[ColumnCount];
-			for (size_t j = 0; j < ColumnCount; j++)
-			{
-				array[i][j] = min + rand() % (max - min + 1);
-			}
-		}
-		return array;
-	}
+	public:
+		std::chrono::time_point<std::chrono::steady_clock> start, end;
+		std::chrono::duration<float> dura;
 
-	template<typename TYPE>
-	TYPE** generate2DArray_manully(size_t RowCount, size_t ColumnCount)
-	{
-		TYPE** array = new TYPE * [RowCount];
-		for (size_t i = 0; i < RowCount; i++)
+		Timer()
 		{
-			array[i] = new TYPE[ColumnCount];
-			for (size_t j = 0; j < ColumnCount; j++)
-			{
-				std::cin >> array[i][j];
-			}
+			start = std::chrono::high_resolution_clock::now();
 		}
-		return array;
-	}
+
+		~Timer()
+		{
+			end = std::chrono::high_resolution_clock::now();
+			dura = end - start;
+			std::cout << "Timer took : " << dura.count() * 1000.0f << "ms" << std::endl;
+		}
+	};
 }
