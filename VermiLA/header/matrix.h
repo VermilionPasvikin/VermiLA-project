@@ -75,7 +75,7 @@ namespace VermiLA
 
 			if (Matrix.inverse != nullptr)
 			{
-				inverse = Matrix.inverse;
+				this->inverse = new matrix(*(Matrix.inverse));
 				exist_inverse = Matrix.exist_inverse;
 			}
 			else
@@ -90,7 +90,9 @@ namespace VermiLA
 			delete[] matrix_array;
 			delete[] row_position;
 			if (inverse != nullptr)
+			{
 				delete inverse;
+			}
 		}
 
 		size_t getRowCount() const;
@@ -100,6 +102,9 @@ namespace VermiLA
 		void printMatrix(unsigned Width, unsigned Precision) const;
 		bool isSquareMatrix() const;
 		bool isInverseExist();
+
+		void setNumber(size_t Index, TYPE value);
+		void setNumber(size_t RowIndex, size_t ColumnIndex, TYPE value);
 
 		matrix getInverse();
 
@@ -142,12 +147,18 @@ namespace VermiLA
 		{
 			if (&Matrix != this)
 			{
-				row_count = Matrix.getRowCount();
-				column_count = Matrix.getColumnCount();
+				this->row_count = Matrix.getRowCount();
+				this->column_count = Matrix.getColumnCount();
 				size_t size = row_count * column_count;
 				TYPE* copy_from = Matrix.getArray();
-
 				std::memcpy(matrix_array, copy_from, sizeof(TYPE) * size);
+
+				this->is_square_matrix = Matrix, is_square_matrix;
+				this->exist_inverse = Matrix.exist_inverse;
+				if (Matrix.inverse != nullptr)
+				{
+					this->inverse = new matrix((*Matrix.inverse));
+				}
 			}
 			return*this;
 		}
@@ -163,8 +174,6 @@ namespace VermiLA
 		matrix multiply(int Scalar);
 		matrix multiply(double Scalar);
 		matrix multiply(const matrix<TYPE>& MultiplierMatrix);
-		void setNumber(size_t Index, TYPE value);
-		void setNumber(size_t RowIndex, size_t ColumnIndex, TYPE value);
 		TYPE* getArray() const;
 		TYPE* getRowPosition(int RowIndex) const;
 		bool sameForm(const matrix<TYPE>& Matrix);
@@ -601,7 +610,7 @@ namespace VermiLA
 
 			this->toUpperTriangleForm(SyncToInverse);//将可能的新产生的零行移到最下
 		}
-		
+
 		return *this;
 	}
 
@@ -648,7 +657,6 @@ namespace VermiLA
 				}
 			}
 		}
-	
 		return *this;
 	}
 }
