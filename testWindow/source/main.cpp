@@ -11,17 +11,29 @@ VermiLA::matrix<TYPE> matrixMultiply(VermiLA::matrix<int>& M1, VermiLA::matrix<i
 	return M1 * M2;
 }
 
+template<typename TYPE>
+VermiLA::matrix<TYPE> func()
+{
+	VermiLA::matrix<int> a;
+	return a;
+}
+
 int main()
 {
-	VermiLA::matrix<double> m1(3, 3, VermiLA::generate2DArray_manully<double>(3, 3));
+	VermiLA::matrix<int> m1(3, 3, VermiLA::generate2DArray_randomly<int>(3, 3));
 	m1.printMatrix(8,6);
 
-	std::cout << (bool)m1.isInverseExist() << std::endl;
+	VermiLA::matrix<int> m2(3, 4, VermiLA::generate2DArray_randomly<int>(3, 4));
+	m2.printMatrix(8, 6);
 
-	if (m1.isInverseExist())
-	{
-		m1.getInverse().printMatrix(12,6);
-	}
+	VermiLA::matrix<int> m3 = m1 * m2;
+	m3.printMatrix(12,6);
 
-	std::cin.get();
+	m1.multiply(m2);
+
+	m1.printMatrix(12, 6);
+
+	std::cout << "//" << std::endl;
+
+	std::cout << std::endl;
 }

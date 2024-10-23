@@ -5,7 +5,7 @@
 namespace VermiLA
 {
 	template<typename TYPE>
-	class vector : public matrix<TYPE>
+	class vector : public matrix<TYPE> //还没有什么用的部分，，，不建议使用vector类，因为它的功能matrix类都有
 	{
 	public:
 		vector() : matrix<TYPE>() //默认构造函数生成一个1*1的零向量

@@ -21,13 +21,7 @@ namespace VermiLA
 		matrix(size_t RowCount, size_t ColumnCount) :row_count(RowCount), column_count(ColumnCount),is_square_matrix(false),exist_inverse(true),inverse(nullptr) //只输入行数或者列数就初始化为零矩阵
 		{
 			matrix_array = new TYPE[column_count * row_count]; //为了避免内存碎片问题，用一维数组分配内存空间；
-			for (size_t i = 0; i < row_count; i++)
-			{
-				for (size_t j = 0; j < column_count; j++)
-				{
-					matrix_array[i * column_count + j] = 0;
-				}
-			}
+			memset(matrix_array, 0, sizeof(int) * row_count * column_count);
 			row_position = new TYPE * [row_count]; //存储矩阵每行开头位置以记录矩阵形状
 			for (size_t i = 0; i < row_count; i++)
 			{
@@ -106,6 +100,12 @@ namespace VermiLA
 		void setNumber(size_t Index, TYPE value);
 		void setNumber(size_t RowIndex, size_t ColumnIndex, TYPE value);
 
+		void add(const matrix& AddendMatrix);
+		void sub(const matrix& AddendMatrix);
+		void multiply(int Scalar);
+		void multiply(double Scalar);
+		void multiply(const matrix<TYPE>& MultiplierMatrix);
+
 		matrix getInverse();
 
 		matrix transpose();
@@ -120,27 +120,100 @@ namespace VermiLA
 
 		matrix operator+(const matrix& AddendMatrix)
 		{
-			return this->add(AddendMatrix);
+			if (not sameForm(AddendMatrix))
+			{
+				throw "MatrixAddition::Exceptional matrix form(Row count and column count).";
+			}
+
+			matrix<TYPE> local_matrix(row_count, column_count);
+			TYPE* addend_matrix_array = AddendMatrix.getArray();
+			for (size_t i = 0; i < this->getMatrixSize(); i++)
+			{
+				local_matrix.setNumber(i, matrix_array[i] + addend_matrix_array[i]);
+			}
+			return local_matrix;
 		}
 
 		matrix operator-(const matrix& SubtrahendMatrix)
 		{
-			return this->sub(SubtrahendMatrix);
+			if (not sameForm(SubtrahendMatrix))
+			{
+				throw "MatrixSubtraction::Exceptional matrix form(Row count and column count).";
+			}
+
+			matrix<TYPE> local_matrix(row_count, column_count);
+			TYPE* subtrahend_matrix_array = SubtrahendMatrix.getArray();
+			for (size_t i = 0; i < this->getMatrixSize(); i++)
+			{
+				local_matrix.setNumber(i, matrix_array[i] - subtrahend_matrix_array[i]);
+			}
+			return local_matrix;
 		}
 
 		matrix operator*(int Scalar)
 		{
-			return this->multiply(Scalar);
+			matrix<TYPE> local_matrix(row_count, column_count);
+			for (size_t i = 0; i < this->getMatrixSize(); i++)
+			{
+				local_matrix.setNumber(i, matrix_array[i] * Scalar);
+			}
+			return local_matrix;
 		}
 
 		matrix operator*(double Scalar)
 		{
-			return this->multiply(Scalar);
+			matrix<TYPE> local_matrix(row_count, column_count);
+			for (size_t i = 0; i < this->getMatrixSize(); i++)
+			{
+				local_matrix.setNumber(i, matrix_array[i] * Scalar);
+			}
+			return local_matrix;
 		}
 
 		matrix operator* (const matrix& MultiplierMatrix)
 		{
-			return this->multiply(MultiplierMatrix);
+			size_t multiplier_matrix_column_count = MultiplierMatrix.getColumnCount();
+			size_t multiplier_matrix_row_count = MultiplierMatrix.getRowCount();
+			TYPE* multiplier_matrix_array = MultiplierMatrix.getArray();
+			matrix<TYPE> product_matrix(row_count, multiplier_matrix_column_count);
+			TYPE* product_matrix_array = product_matrix.getArray();
+
+			if (column_count != multiplier_matrix_row_count)
+			{
+				throw "MatrixMultiply::Exceptional matrix form(Row count and column count).";
+			}
+
+			for (size_t i = 0; i < row_count; ++i)
+			{
+				for (size_t k = 0; k < column_count; ++k)
+				{
+					TYPE temp = matrix_array[i * column_count + k];
+					for (size_t j = 0; j < multiplier_matrix_column_count; ++j)
+					{
+						product_matrix_array[i * multiplier_matrix_column_count + j] +=
+							temp * multiplier_matrix_array[k * multiplier_matrix_column_count + j];
+					}
+				}
+			}
+
+			/*size_t i(0), j(0), k(0);   //release模式下（优选速度O（2））for循环版本效率更高些
+			do
+			{
+				do
+				{
+					TYPE temp = matrix_array[i * column_count + k];
+					do
+					{
+						product_matrix_array[i * multiplier_matrix_column_count + j] += temp * multiplier_matrix_array[k * multiplier_matrix_column_count + j];
+						++j;
+					} while (j < multiplier_matrix_column_count);
+					j = 0;
+					++k;
+				} while (k < column_count);
+				k = 0;
+				++i;
+			} while (i < row_count);*/
+			return product_matrix;
 		}
 
 		matrix operator=(const matrix& Matrix)
@@ -151,29 +224,38 @@ namespace VermiLA
 				this->column_count = Matrix.getColumnCount();
 				size_t size = row_count * column_count;
 				TYPE* copy_from = Matrix.getArray();
+
+				delete matrix_array;
+				matrix_array = new TYPE[row_count * column_count];
 				std::memcpy(matrix_array, copy_from, sizeof(TYPE) * size);
 
-				this->is_square_matrix = Matrix, is_square_matrix;
+				delete[] row_position;
+				row_position = new TYPE * [row_count];
+				for (size_t i = 0; i < row_count; i++)
+				{
+					row_position[i] = matrix_array + column_count * i;
+				}
+
+				this->is_square_matrix = Matrix.is_square_matrix;
 				this->exist_inverse = Matrix.exist_inverse;
 				if (Matrix.inverse != nullptr)
 				{
+					if (inverse != nullptr)
+					{
+						delete inverse;
+					}
 					this->inverse = new matrix((*Matrix.inverse));
 				}
 			}
 			return*this;
 		}
 
-		TYPE* operator[](size_t index)
+		TYPE* operator[](size_t index) //你可以像访问二维数组一样访问矩阵中对应行列的元素！
 		{
 			return getRowPosition(index);
 		}
 
 	protected:
-		matrix add(const matrix& AddendMatrix);
-		matrix sub(const matrix& AddendMatrix);
-		matrix multiply(int Scalar);
-		matrix multiply(double Scalar);
-		matrix multiply(const matrix<TYPE>& MultiplierMatrix);
 		TYPE* getArray() const;
 		TYPE* getRowPosition(int RowIndex) const;
 		bool sameForm(const matrix<TYPE>& Matrix);
@@ -363,106 +445,57 @@ namespace VermiLA
 	}
 
 	template<typename TYPE>
-	matrix<TYPE> matrix<TYPE>::add(const matrix& AddendMatrix)
+	void matrix<TYPE>::add(const matrix& AddendMatrix)
 	{
 		if (not sameForm(AddendMatrix))
 		{
 			throw "MatrixAddition::Exceptional matrix form(Row count and column count).";
 		}
 
-		matrix<TYPE> local_matrix(row_count, column_count);
 		TYPE* addend_matrix_array = AddendMatrix.getArray();
 		for (size_t i = 0; i < this->getMatrixSize(); i++)
 		{
-			local_matrix.setNumber(i, matrix_array[i] + addend_matrix_array[i]);
+			this->setNumber(i, matrix_array[i] + addend_matrix_array[i]);
 		}
-		return local_matrix;
 	}
 
 	template<typename TYPE>
-	matrix<TYPE> matrix<TYPE>::sub(const matrix& SubtrahendMatrix)
+	void matrix<TYPE>::sub(const matrix& SubtrahendMatrix)
 	{
 		if (not sameForm(SubtrahendMatrix))
 		{
 			throw "MatrixSubtraction::Exceptional matrix form(Row count and column count).";
 		}
 
-		matrix<TYPE> local_matrix(row_count, column_count);
 		TYPE* subtrahend_matrix_array = SubtrahendMatrix.getArray();
 		for (size_t i = 0; i < this->getMatrixSize(); i++)
 		{
-			local_matrix.setNumber(i, matrix_array[i] - subtrahend_matrix_array[i]);
+			this->setNumber(i, matrix_array[i] - subtrahend_matrix_array[i]);
 		}
-		return local_matrix;
 	}
 
 	template<typename TYPE>
-	matrix<TYPE> matrix<TYPE>::multiply(int Scalar)
+	void matrix<TYPE>::multiply(int Scalar)
 	{
-		matrix<TYPE> local_matrix(row_count, column_count);
 		for (size_t i = 0; i < this->getMatrixSize(); i++)
 		{
-			local_matrix.setNumber(i, matrix_array[i] * Scalar);
+			this->setNumber(i, matrix_array[i] * Scalar);
 		}
-		return local_matrix;
 	}
 
 	template<typename TYPE>
-	matrix<TYPE> matrix<TYPE>::multiply(double Scalar)
+	void matrix<TYPE>::multiply(double Scalar)
 	{
-		matrix<TYPE> local_matrix(row_count, column_count);
 		for (size_t i = 0; i < this->getMatrixSize(); i++)
 		{
-			local_matrix.setNumber(i, matrix_array[i] * Scalar);
+			this->setNumber(i, matrix_array[i] * Scalar);
 		}
-		return local_matrix;
 	}
 
 	template<typename TYPE>
-	matrix<TYPE> matrix<TYPE>::multiply(const matrix<TYPE>& MultiplierMatrix)
+	void matrix<TYPE>::multiply(const matrix<TYPE>& MultiplierMatrix)
 	{
-		size_t multiplier_matrix_column_count = MultiplierMatrix.getColumnCount();
-		size_t multiplier_matrix_row_count = MultiplierMatrix.getRowCount();
-		TYPE* multiplier_matrix_array = MultiplierMatrix.getArray();
-		matrix<TYPE> product_matrix(row_count, multiplier_matrix_column_count);
-		TYPE* product_matrix_array = product_matrix.getArray();
-
-		if (column_count != multiplier_matrix_row_count)
-		{
-			throw "MatrixMultiply::Exceptional matrix form(Row count and column count).";
-		}
-
-		for (size_t i = 0; i < row_count; ++i)
-		{
-			for (size_t k = 0; k < column_count; ++k)
-			{
-				TYPE temp = matrix_array[i * column_count + k];
-				for (size_t j = 0; j < multiplier_matrix_column_count; ++j)
-				{
-					product_matrix_array[i * multiplier_matrix_column_count + j] +=
-						temp * multiplier_matrix_array[k * multiplier_matrix_column_count + j];
-				}
-			}
-		}
-
-		/*size_t i(0), j(0), k(0);   //release模式下（优选速度O（2））for循环版本效率更高些
-		do
-		{
-			do
-			{
-				TYPE temp = matrix_array[i * column_count + k];
-				do
-				{
-					product_matrix_array[i * multiplier_matrix_column_count + j] += temp * multiplier_matrix_array[k * multiplier_matrix_column_count + j];
-					++j;
-				} while (j < multiplier_matrix_column_count);
-				j = 0;
-				++k;	
-			} while (k < column_count);
-			k = 0;
-			++i;
-		} while (i < row_count);*/
-		return product_matrix;
+		(*this) = ((*this) * MultiplierMatrix);
 	}
 
 	template<typename TYPE>

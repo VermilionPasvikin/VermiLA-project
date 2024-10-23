@@ -1,4 +1,8 @@
 #pragma once
+#include <iostream>
+#include <stdlib.h>
+#include <time.h>
+
 namespace VermiLA
 {
 	template<typename TYPE>
