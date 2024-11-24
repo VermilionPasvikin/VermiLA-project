@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip> 
 #include <cstring>
+#include "test.h"
 #include "spawnMatrix.h"
 
 namespace VermiLA
@@ -95,7 +96,8 @@ namespace VermiLA
 		void printMatrix() const;
 		void printMatrix(unsigned Width, unsigned Precision) const;
 		bool isSquareMatrix() const;
-		bool isInverseExist();
+		bool isInverseExist(); //这个方法不是const方法是因为求逆矩阵需要边算边求
+		void clearInverse(); //直接释放inverse并将is_inverse_exist置为true，恢复到调用isInverseExist()方法前的状态
 
 		void setNumber(size_t Index, TYPE value);
 		void setNumber(size_t RowIndex, size_t ColumnIndex, TYPE value);
@@ -114,9 +116,9 @@ namespace VermiLA
 		void rowAddition(size_t SourceRowIndex, size_t OperatedRowIndex, TYPE times);
 		void rowMultiplication(size_t RowIndex, TYPE Scalar);
 
-		matrix toUpperTriangleForm(bool SyncToInverse = false);
-		matrix toEcheloForm(bool SyncToInverse = false);
-		matrix toReducedEcheloForm(bool SyncToInverse = false);
+		matrix toUpperTriangleForm(bool ApplyToInverse = false);
+		matrix toEcheloForm(bool ApplyToInverse = false);
+		matrix toReducedEcheloForm(bool ApplyToInverse = false);
 
 		matrix operator+(const matrix& AddendMatrix)
 		{
@@ -216,7 +218,7 @@ namespace VermiLA
 			return product_matrix;
 		}
 
-		matrix operator=(const matrix& Matrix)
+		matrix& operator=(const matrix& Matrix)
 		{
 			if (&Matrix != this)
 			{
@@ -247,7 +249,7 @@ namespace VermiLA
 					this->inverse = new matrix((*Matrix.inverse));
 				}
 			}
-			return*this;
+			return *this;
 		}
 
 		TYPE* operator[](size_t index) //你可以像访问二维数组一样访问矩阵中对应行列的元素！
@@ -255,12 +257,14 @@ namespace VermiLA
 			return getRowPosition(index);
 		}
 
+		bool operator==(matrix& right);//因为要写对浮点型的偏特化模板，所以它的定义在类外。
+
 	protected:
 		TYPE* getArray() const;
 		TYPE* getRowPosition(int RowIndex) const;
 		bool sameForm(const matrix<TYPE>& Matrix);
 
-		mutable matrix* inverse;
+		matrix* inverse;
 		bool exist_inverse;
 		bool is_square_matrix;
 
@@ -269,6 +273,103 @@ namespace VermiLA
 		TYPE* matrix_array;
 		TYPE** row_position;
 	};
+
+	template<typename TYPE>
+	inline bool VermiLA::matrix<TYPE>::operator==(matrix& right)
+	{
+		if (this->getMatrixSize() != right.getMatrixSize())
+			return false;
+
+		if (this->getRowCount() != right.getRowCount())
+			return false;
+
+		bool is_equal = true;
+		TYPE* this_MR = this->getArray();
+		TYPE* right_MR = right.getArray();
+		for (size_t i = 0; i < this->getRowCount(); ++i)
+		{
+			if (this_MR[i] != right_MR[i])
+			{
+				is_equal == false;
+				break;
+			}
+		}
+
+		return is_equal;
+	}
+
+	template<>
+	bool VermiLA::matrix<double>::operator==(matrix& right)
+	{
+		size_t this_size = this->getMatrixSize();
+		if (this_size != right.getMatrixSize())
+			return false;
+
+		if (this->getRowCount() != right.getRowCount())
+			return false;
+
+		bool is_equal = true;
+		double* this_MR = this->getArray();
+		double* right_MR = right.getArray();
+		for (size_t i = 0; i < this_size; ++i)
+		{
+			if (not isAlmostEqual(this_MR[i],right_MR[i]))
+			{
+				is_equal = false;
+				break;
+			}
+		}
+
+		return is_equal;
+	}
+
+	template<>
+	bool VermiLA::matrix<float>::operator==(matrix& right)
+	{
+		if (this->getMatrixSize() != right.getMatrixSize())
+			return false;
+
+		if (this->getRowCount() != right.getRowCount())
+			return false;
+
+		bool is_equal = true;
+		float* this_MR = this->getArray();
+		float* right_MR = right.getArray();
+		for (size_t i = 0; i < this->getRowCount(); ++i)
+		{
+			if (not isAlmostEqual(this_MR[i], right_MR[i]))
+			{
+				is_equal = false;
+				break;
+			}
+		}
+
+		return is_equal;
+	}
+
+	template<>
+	bool VermiLA::matrix<long double>::operator==(matrix& right)
+	{
+		if (this->getMatrixSize() != right.getMatrixSize())
+			return false;
+
+		if (this->getRowCount() != right.getRowCount())
+			return false;
+
+		bool is_equal = true;
+		long double* this_MR = this->getArray();
+		long double* right_MR = right.getArray();
+		for (size_t i = 0; i < this->getRowCount(); ++i)
+		{
+			if (not isAlmostEqual(this_MR[i], right_MR[i]))
+			{
+				is_equal = false;
+				break;
+			}
+		}
+
+		return is_equal;
+	}
 
 	template<typename TYPE>
 	inline size_t matrix<TYPE>::getRowCount() const
@@ -351,10 +452,10 @@ namespace VermiLA
 	bool matrix<TYPE>::isInverseExist()
 	{
 		//如果不是方阵直接返回false
-		//如果是方阵且Inverse是nullptr就对自己进行行化简，同时将Inverse初始化成一个单位矩阵
-		//在对自己行化简的同时对Inverse采取相同操作
-		//最终看Inverse有没有0行，如果有的话就把Inverse_exist设置成false
-		//返回Inverse_exist
+		//如果是方阵且inverse是nullptr就对自己进行行化简，同时将inverse初始化成一个单位矩阵
+		//在对自己行化简的同时对inverse采取相同操作
+		//最终看inverse有没有0行，如果有的话就把inverse_exist设置成false
+		//返回inverse_exist
 
 		if (not is_square_matrix)
 		{
@@ -430,6 +531,18 @@ namespace VermiLA
 				}
 			}
 		}
+	}
+
+	template<typename TYPE>
+	inline void matrix<TYPE>::clearInverse()
+	{
+		if (this->inverse != nullptr)
+		{
+			delete this->inverse;
+			this->inverse = nullptr;
+		}
+
+		this->exist_inverse = true;
 	}
 
 	template<typename TYPE>
@@ -546,7 +659,7 @@ namespace VermiLA
 	}
 
 	template<typename TYPE> //这个仅仅是重新排列每一行的顺序！并不包括化简！
-	matrix<TYPE> matrix<TYPE>::toUpperTriangleForm(bool SyncToInverse)
+	matrix<TYPE> matrix<TYPE>::toUpperTriangleForm(bool ApplyToInverse)
 	{
 		//记录每一行开头的连续0数
 		size_t* row_zero_count_array = new size_t[row_count];
@@ -583,7 +696,7 @@ namespace VermiLA
 						if (j != max_arranged_row_index)
 						{
 							this->rowInterchange(j, max_arranged_row_index);
-							if (SyncToInverse)
+							if (ApplyToInverse)
 							{
 								inverse->rowInterchange(j, max_arranged_row_index);
 							}
@@ -603,7 +716,7 @@ namespace VermiLA
 	}
 
 	template<typename TYPE>
-	matrix<TYPE> matrix<TYPE>::toEcheloForm(bool SyncToInverse)
+	matrix<TYPE> matrix<TYPE>::toEcheloForm(bool ApplyToInverse)
 	{
 		for (size_t focus_row_index = 0; focus_row_index < row_count; focus_row_index++)
 		{
@@ -623,7 +736,7 @@ namespace VermiLA
 				{
 					TYPE times = 1 / first_nonzero_element;
 					rowMultiplication(focus_row_index, times);
-					if (SyncToInverse)
+					if (ApplyToInverse)
 					{
 						inverse->rowMultiplication(focus_row_index, times);
 					}
@@ -635,23 +748,23 @@ namespace VermiLA
 			{
 				TYPE times = -1 * row_position[i][first_nonzero_element_column_index];
 				this->rowAddition(focus_row_index, i, times);
-				if (SyncToInverse)
+				if (ApplyToInverse)
 				{
 					inverse->rowAddition(focus_row_index, i, times);
 				}
 			}
 
-			this->toUpperTriangleForm(SyncToInverse);//将可能的新产生的零行移到最下
+			this->toUpperTriangleForm(ApplyToInverse);//将可能的新产生的零行移到最下
 		}
 
 		return *this;
 	}
 
 	template<typename TYPE>
-	matrix<TYPE> matrix<TYPE>::toReducedEcheloForm(bool SyncToInverse)
+	matrix<TYPE> matrix<TYPE>::toReducedEcheloForm(bool ApplyToInverse)
 	{
 		//化简成行阶梯型
-		this->toEcheloForm(SyncToInverse); 
+		this->toEcheloForm(ApplyToInverse); 
 
 		//找到最大索引非零行
 		bool not_all_zero = false;
@@ -684,7 +797,7 @@ namespace VermiLA
 			{
 				TYPE times = -1 * row_position[i][first_nonzero_element_column_index];
 				this->rowAddition(row_index, i, times);
-				if (SyncToInverse)
+				if (ApplyToInverse)
 				{
 					inverse->rowAddition(row_index, i, times);
 				}

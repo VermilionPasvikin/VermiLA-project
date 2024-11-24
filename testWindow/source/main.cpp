@@ -7,33 +7,29 @@
 template<typename TYPE>
 VermiLA::matrix<TYPE> matrixMultiply(VermiLA::matrix<int>& M1, VermiLA::matrix<int>& M2)
 {
-	VermiLA::Timer timer1;
+	VermiLA::timer timer1;
 	return M1 * M2;
-}
-
-template<typename TYPE>
-VermiLA::matrix<TYPE> func()
-{
-	VermiLA::matrix<int> a;
-	return a;
 }
 
 int main()
 {
-	VermiLA::matrix<int> m1(3, 3, VermiLA::generate2DArray_randomly<int>(3, 3));
-	m1.printMatrix(8,6);
+	VermiLA::matrix<double> m1(3, 3, VermiLA::generate2DArray_randomly<double>(3, 3));
+	VermiLA::matrix<double> m2(3, 3, VermiLA::generate2DArray_randomly<double>(3, 3));
+	VermiLA::matrix<double> m3;
 
-	VermiLA::matrix<int> m2(3, 4, VermiLA::generate2DArray_randomly<int>(3, 4));
-	m2.printMatrix(8, 6);
+	m1.printMatrix();
 
-	VermiLA::matrix<int> m3 = m1 * m2;
-	m3.printMatrix(12,6);
+	std::cout << m1.isInverseExist() << std::endl;
+	if (m1.isInverseExist())
+	{
+		m2 = m1.getInverse();
+		m2.printMatrix();
+	}
 
-	m1.multiply(m2);
+	m3 = m1;
 
-	m1.printMatrix(12, 6);
+	m3.printMatrix();
 
-	std::cout << "//" << std::endl;
-
-	std::cout << std::endl;
+	m3.clearInverse();
+	m3.isInverseExist();
 }
